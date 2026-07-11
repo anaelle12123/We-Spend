@@ -912,6 +912,7 @@ function render(){
   setTimeout(()=>{
     const safe = (fn)=>{ try{ fn(); }catch(e){ console.error('chart build error:', e); } };
     if(STATE.currentTab==='dashboard'){ safe(buildDashboardChart); safe(buildCategoryPies); }
+    if(STATE.currentTab==='expenses'){ safe(()=>buildOnePie('pieExpShared', SHARED)); }
     if(STATE.currentTab==='income'){ safe(buildIncomeChart); safe(buildForecastCharts); safe(buildIncomeExpenseCharts); }
     if(STATE.currentTab==='savings'){ safe(buildSavingsChart); safe(animateVault); safe(animateGoalVaults); }
     if(STATE.currentTab==='forecast'){ safe(buildBudgetChart); }
@@ -1199,6 +1200,10 @@ function renderExpenses(){
   <div class="panel">
     ${rows || `<div class="empty"><div class="big">אין הוצאות לחודש זה</div>הוסיפו הוצאה חדשה עם הכפתור למעלה</div>`}
   </div>
+  <div class="panel">
+    <h3>התפלגות הוצאות משותפות 🤝 - ${MONTHS[STATE.currentMonth]}</h3>
+    <div class="chartWrap"><canvas id="pieExpShared"></canvas></div>
+  </div>
   ${renderFixedExpenses()}`;
 }
 
@@ -1206,10 +1211,11 @@ function renderExpenses(){
 function renderFixedExpenses(){
   const fixed = STATE.data.fixedExpenses || [];
   const total = fixed.reduce((s,f)=>s+(Number(f.Amount)||0),0);
-  let p1 = 0, p2 = 0;
+  let p1 = 0, p2 = 0, shared = 0;
   fixed.forEach(f=>{
     if(f.Person===STATE.person1) p1 += Number(f.Amount)||0;
     else if(f.Person===STATE.person2) p2 += Number(f.Amount)||0;
+    else if(isShared(f.Person)) shared += Number(f.Amount)||0;
   });
 
   const rows = fixed.length ? fixed.map(f=>
@@ -1235,6 +1241,7 @@ function renderFixedExpenses(){
       <div class="card"><div class="lbl">סה"כ חודשי</div><div class="val red">${fmt(total)}</div></div>
       <div class="card"><div class="lbl">${STATE.person2}</div><div class="val red">${fmt(p2)}</div></div>
       <div class="card"><div class="lbl">${STATE.person1}</div><div class="val red">${fmt(p1)}</div></div>
+      <div class="card"><div class="lbl">🤝 ${SHARED}</div><div class="val red">${fmt(shared)}</div></div>
     </div>
     <div class="list">${rows}</div>
   </div>`;
