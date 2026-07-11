@@ -451,7 +451,7 @@
    הגדרות - חובה להחליף בכתובת ה-URL של הפריסה (Deploy) שלכם
    אחרי שהרצתם setup ופרסתם את ה-Apps Script כ-Web app
    ========================================================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK4PWyxDD3d8sWokojl_4Uj-91wuCc-Izys4uRyF_xVN2ZCwRK6RP2_6we38fn_H5g/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbGePVG59dLZUJESr10ju1pSgmtaKlyJAaWjyXA255h390eV9YOdc6u_nvt--QvUh5/exec";
 if(window.ChartDataLabels){ Chart.register(ChartDataLabels); Chart.defaults.set('plugins.datalabels', {display:false}); }
 // אנימציה גלובלית פשוטה ובטוחה - כל הגרפים מונפשים בכניסה
 if(window.Chart){
@@ -471,6 +471,18 @@ if(window.Chart){
 
 const MONTHS = ['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 const HEART = {p1:'💗', p2:'💙'};
+
+// רשימת קטגוריות ברירת המחדל (זהה ל-REAL_CATEGORIES ב-Code.gs).
+// משמשת לכפתור "הוסף קטגוריות חסרות" שמוסיף קטגוריות חדשות בלי למחוק נתונים.
+const DEFAULT_CATEGORIES = [
+  '📌 הוצאות קבועות','🔁 הוראת קבע','🔧 מוסך רכב','⛽ דלק','🚗 דלק וחניונים','🍱 אוכל לשתינו','🥡 אוכל לעצמי',
+  '🎉 יציאות עם חברים','🎉 יציאות עם חברות','🛒 קניות בדרך','✂️ ספר','📖 ספרים','🚬 סיגריות',
+  '🅿️ פנגו וחניונים','🛣️ כביש 6','🅿️ חניונים','🚿 שטיפת רכב','🏋️ חדר כושר','👔 טיפוח - בגדים/הזמנות',
+  '👗 טיפוח - בגדים/הזמנות/סופר פארם','💊 סופר פארם / תרופות','💒 חתונות','💊 אחר / בלתי צפוי',
+  '✂️ גבות','📚 לימודים','💆 טיפולי אקנה ושיער',"💅 לק ג'ל",'🎁 מתנות משפחה','🏡 צימר / חופשה',
+  '🍽️ אוכל (משותף)','🛡️ ביטוחים','💡 חשבון חשמל','💧 חשבון מים','🔥 חשבון גז','🏛️ ארנונה','🏢 ועד בית','🏠 שכירות',
+  'אחר'
+];
 
 let STATE = {
   data: null,          // { expenses, income, savings, settings }
@@ -2723,6 +2735,7 @@ function renderSettings(){
       <input type="text" id="newCatInput" placeholder="שם קטגוריה חדשה (אפשר עם אימוג'י)" onkeydown="if(event.key==='Enter')addCategory()">
       <button class="addBtn" onclick="addCategory()">הוסף +</button>
     </div>
+    <button class="miniBtn" style="width:auto;display:inline-block;padding:8px 16px;margin-top:10px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);" onclick="restoreDefaultCategories()">↻ הוסף קטגוריות ברירת מחדל חסרות</button>
     <button class="saveBtn" onclick="saveCategories()" style="margin-top:14px;">💾 שמור קטגוריות</button>
   </div>
   <div class="panel">
@@ -2799,6 +2812,22 @@ async function saveCategories(){
   STATE.editCategories = null; // מאפסים כדי שייטען מחדש מהגיליון
   await refreshData();
   render();
+}
+
+// מוסיף את כל קטגוריות ברירת המחדל שחסרות ברשימה הנוכחית - בלי למחוק שום דבר קיים.
+// שימושי אחרי עדכון גרסה שהוסיף קטגוריות חדשות, בלי צורך להריץ setup מחדש.
+function restoreDefaultCategories(){
+  const cats = getEditCategories();
+  let added = 0;
+  DEFAULT_CATEGORIES.forEach(c=>{
+    if(!cats.includes(c)){ cats.push(c); added++; }
+  });
+  document.getElementById('catManager').innerHTML = renderCategoryList();
+  if(added > 0){
+    showToast('נוספו ' + added + ' קטגוריות. לחצו "שמור קטגוריות" כדי לשמור.', 'success');
+  } else {
+    showToast('כל קטגוריות ברירת המחדל כבר קיימות', 'info');
+  }
 }
 
 async function saveAlertEmails(){
