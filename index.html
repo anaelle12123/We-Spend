@@ -3,15 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>ניהול הוצאות</title>
+<title>We $pend</title>
 
 <!-- ===== הגדרות אפליקציה (PWA) למסך הבית באייפון ===== -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="הוצאות">
-<meta name="theme-color" content="#131313">
-<!-- אייקון SVG מוטמע: עיגול ירוק עם האותיות ט' ר' -->
-<link rel="apple-touch-icon" href="vault-icon.png">
+<meta name="apple-mobile-web-app-title" content="We $pend">
+<meta name="mobile-web-app-capable" content="yes">
+<meta id="themeColorMeta" name="theme-color" content="#0f1620">
+<link rel="manifest" href="manifest.json">
+<!-- אייקון We $pend למסך הבית -->
+<link rel="apple-touch-icon" href="wespend-app-icon-v2.png">
+<link rel="apple-touch-icon" sizes="180x180" href="wespend-app-icon-v2.png">
+<link rel="icon" type="image/png" href="wespend-app-icon-v2.png">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
@@ -26,10 +30,12 @@
     --muted:#9a9a9e;
     --accent:#1fbf9f;
     --accent-dark:#17a68a;
-    --p1:#ec5a8f;      /* טל - ורוד */
+    --p1:#ec5a8f;      /* בן/בת זוג 1 - ורוד */
     --p1-bg:rgba(236,90,143,.12);
-    --p2:#4f8ff7;      /* רון - כחול */
+    --p2:#4f8ff7;      /* בן/בת זוג 2 - כחול */
     --p2-bg:rgba(79,143,247,.12);
+    --p3:#1fbf9f;      /* משותף - ירקרק */
+    --p3-bg:rgba(31,191,159,.12);
     --gold:#f5a623;
     --red:#ef5a5a;
     --radius:14px;
@@ -57,23 +63,34 @@
   }
   *{box-sizing:border-box;}
   html{
-    overflow-x:hidden;overscroll-behavior-x:none;
-    background:var(--bg-image) center/cover no-repeat fixed;
-    background-color:var(--bg);
+    /* overflow-x:clip מונע גלילה אופקית בלי להפוך את ה-html ל"מיכל גלילה" חסום,
+       מה שהיה מונע גלילה אנכית עם הטאצ'פד. overflow-y:auto מבטיח גלילה אנכית תקינה. */
+    overflow-x:clip;
+    overflow-y:auto;
+    min-height:100%;
+    /* בלי background-attachment:fixed - שבור ב-iOS ומשאיר פס באזור ה-safe area */
+    background:
+      linear-gradient(180deg, rgba(10,20,35,.25), rgba(10,20,35,.5)),
+      var(--bg-image) center/cover no-repeat;
+    background-color:#0f1620;
   }
+  html.light{background-color:#dfe4ee;}
+  html.pink{background-color:#f3c9dc;}
   body{margin:0;font-family:'Segoe UI',Arial,sans-serif;color:var(--text);transition:color .2s;
-    overflow-x:hidden;overscroll-behavior-x:none;position:relative;
-    min-height:100vh;min-height:100dvh;
+    position:relative;
+    min-height:100vh;min-height:100dvh;min-height:100lvh;
   }
   /* שכבת התמונה עם הגברת צבע וחדות */
   body::before{
-    content:"";position:fixed;inset:0;z-index:-2;
+    content:"";position:fixed;top:-200px;left:0;right:0;z-index:-2;pointer-events:none;
+    height:calc(100vh + 400px);height:calc(100lvh + 400px);
     background:var(--bg-image) center/cover no-repeat;
     filter:saturate(1.35) contrast(1.12) brightness(1.03);
   }
   /* שכבת כיסוי + וינייטה (הכהיה עדינה בקצוות) */
   body::after{
-    content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+    content:"";position:fixed;top:-200px;left:0;right:0;z-index:-1;pointer-events:none;
+    height:calc(100vh + 400px);height:calc(100lvh + 400px);
     background:
       radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.45) 100%),
       linear-gradient(180deg, rgba(19,19,19,.55), rgba(19,19,19,.64));
@@ -98,18 +115,36 @@
 
   /* ---------- LOGIN / SETUP ---------- */
   #loginScreen, #setupScreen{
+    box-sizing:border-box;position:relative;
     min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
     padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
-    background-color:#1a2433;
+  }
+  #setupScreen{display:none;}
+  /* רקע מסך הכניסה - מוארך 200px מעל ומתחת כדי שלעולם לא ייראה הקצה */
+  #loginScreen::before, #setupScreen::before{
+    content:"";position:fixed;top:-200px;left:0;right:0;bottom:-200px;z-index:0;pointer-events:none;
     background:
       linear-gradient(180deg, rgba(10,20,35,.25), rgba(10,20,35,.5)),
       var(--bg-image) center/cover no-repeat;
   }
+  /* התוכן של מסך הכניסה מעל שכבת הרקע */
+  #loginScreen > *, #setupScreen > *{position:relative;z-index:1;}
   #loginScreen .box, #setupScreen .box{
     background:rgba(255,255,255,.92);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.5);border-radius:var(--radius);
     padding:36px;width:320px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.25);
   }
   #loginScreen h1, #setupScreen h1{font-size:22px;margin:0 0 6px;color:#2a2118;}
+  /* ===== לוגו We $pend ===== */
+  .brandLogo{display:inline-flex;align-items:center;font-weight:800;letter-spacing:-.5px;direction:ltr;unicode-bidi:isolate;}
+  .brandLogo .dollar{
+    display:inline-flex;align-items:center;justify-content:center;
+    margin:0 -1px;
+    font-weight:900;
+    background:linear-gradient(135deg,#ffe14d 0%,#f5d020 40%,#7fe7ff 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;
+    filter:drop-shadow(0 0 6px rgba(255,225,77,.55)) drop-shadow(0 0 10px rgba(127,231,255,.35));
+  }
   #loginScreen p, #setupScreen p{color:#8a7a68;font-size:13px;margin:0 0 20px;}
   #loginScreen input, #setupScreen input{
     width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e8dcc8;
@@ -120,7 +155,6 @@
     font-weight:700;font-size:15px;
   }
   #loginError, #setupError{color:var(--red);font-size:13px;min-height:18px;}
-  #setupScreen{display:none;}
   /* Toasts */
   #toastContainer{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:10000;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;width:100%;max-width:400px;padding:0 12px;}
   .toast{pointer-events:auto;background:var(--panel-2);border:1px solid var(--border);border-radius:12px;padding:12px 18px;font-size:14px;color:var(--text);box-shadow:0 8px 24px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px;min-width:200px;max-width:100%;opacity:0;transform:translateY(-20px);transition:opacity .3s,transform .3s;}
@@ -144,7 +178,7 @@
   #vaultAnimSvg{width:min(70vw,300px);height:min(70vw,300px);}
 
   /* ---------- APP LAYOUT ---------- */
-  #app{display:none;min-height:100vh;width:100%;max-width:100vw;overflow-x:hidden;overscroll-behavior-y:contain;}
+  #app{display:none;min-height:100vh;width:100%;max-width:100vw;overflow-x:clip;}
   .layout{display:flex;min-height:100vh;width:100%;max-width:100vw;}
   .content{flex:1;padding:28px 32px;max-width:900px;min-width:0;}
   .sidebar{
@@ -179,6 +213,7 @@
   .val.red{color:var(--red);}
   .val.p1{color:var(--p1);}
   .val.p2{color:var(--p2);}
+  .val.p3{color:var(--p3);}
   .val.gold{color:var(--gold);}
 
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:18px;}
@@ -200,6 +235,7 @@
   .listRow .who{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
   .listRow .who.p1{background:var(--p1-bg);}
   .listRow .who.p2{background:var(--p2-bg);}
+  .listRow .who.p3{background:var(--p3-bg);}
   .listRow .info{flex:1;padding:0 12px;}
   .listRow .info .cat{font-weight:600;font-size:14px;}
   .listRow .info .notes{color:var(--muted);font-size:12px;margin-top:2px;}
@@ -256,6 +292,12 @@
   .themePreview{border-radius:10px;padding:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid var(--border);margin-bottom:10px;}
   .themeName{font-weight:600;font-size:15px;}
   .themeCheck{color:var(--accent);font-size:13px;font-weight:600;margin-top:4px;}
+  .accentGrid{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;}
+  .accentCard{border:2px solid var(--border);border-radius:14px;padding:12px;cursor:pointer;text-align:center;transition:border-color .15s;min-width:80px;}
+  .accentCard:hover{border-color:var(--accent);}
+  .accentCard.active{border-color:var(--accent);background:var(--panel-2);}
+  .accentSwatch{width:48px;height:48px;border-radius:50%;margin:0 auto 8px;box-shadow:0 2px 10px rgba(0,0,0,.25);}
+  .accentName{font-weight:600;font-size:14px;}
   .bgGrid{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;}
   .bgCard{flex:1;min-width:130px;max-width:180px;border:2px solid var(--border);border-radius:14px;padding:8px;cursor:pointer;text-align:center;transition:border-color .15s,transform .15s;}
   .bgCard:hover{border-color:var(--accent);transform:translateY(-2px);}
@@ -330,7 +372,7 @@
 <!-- ============ LOGIN ============ -->
 <div id="loginScreen">
   <div class="box">
-    <h1>ניהול הוצאות 💰</h1>
+    <h1><span class="brandLogo">We<span class="dollar">$</span>pend</span></h1>
     <p id="loginGreeting">הזינו את הסיסמה המשותפת כדי להיכנס</p>
     <input type="password" id="pwInput" placeholder="סיסמה" onkeydown="if(event.key==='Enter')doLogin()">
     <button onclick="doLogin()">כניסה</button>
@@ -341,12 +383,12 @@
 <!-- ============ הגדרה ראשונית (רק בכניסה הראשונה לאתר) ============ -->
 <div id="setupScreen">
   <div class="box">
-    <h1>ברוכים הבאים! 👋</h1>
-    <p>לפני שמתחילים - איך קוראים לשניכם, ואיזו סיסמה תרצו לבחור?</p>
-    <input type="text" id="setupName1" placeholder="השם הראשון">
-    <input type="text" id="setupName2" placeholder="השם השני">
+    <h1><span class="brandLogo">We<span class="dollar">$</span>pend</span></h1>
+    <p>ברוכים הבאים! 👋 לפני שמתחילים - בחרו סיסמה, ואיך קוראים לשניכם?</p>
     <input type="password" id="setupPw1" placeholder="בחרו סיסמה">
-    <input type="password" id="setupPw2" placeholder="אימות סיסמה" onkeydown="if(event.key==='Enter')doFirstTimeSetup()">
+    <input type="password" id="setupPw2" placeholder="אימות סיסמה">
+    <input type="text" id="setupName1" placeholder="השם הראשון (בן/בת זוג 1)">
+    <input type="text" id="setupName2" placeholder="השם השני (בן/בת זוג 2)" onkeydown="if(event.key==='Enter')doFirstTimeSetup()">
     <button onclick="doFirstTimeSetup()">שמרו והתחילו 🎉</button>
     <div id="setupError"></div>
   </div>
@@ -371,7 +413,7 @@
         <line x1="120" y1="120" x2="93" y2="93"/><line x1="120" y1="120" x2="147" y2="147"/>
       </g>
     </g>
-    <text x="120" y="132" text-anchor="middle" font-size="42" id="vtMoney" opacity="0">💰</text>
+    <text x="120" y="128" text-anchor="middle" font-size="30" font-weight="800" id="vtMoney" opacity="0" style="direction:ltr;"><tspan fill="#ffffff">We</tspan><tspan fill="#ffe14d">$</tspan><tspan fill="#ffffff">pend</tspan></text>
   </svg>
 </div>
 
@@ -380,8 +422,7 @@
   <div class="layout">
     <div class="sidebar">
       <div class="who">
-        <div class="name" id="sidebarNames">🪙</div>
-        <div class="sub">ניהול הוצאות 2026</div>
+        <div class="name"><span class="brandLogo">We<span class="dollar">$</span>pend</span></div>
       </div>
       <button class="navbtn" data-tab="dashboard" onclick="goTab('dashboard')">דשבורד <span>▦</span></button>
       <button class="navbtn" data-tab="expenses" onclick="goTab('expenses')">הוצאות <span>$</span></button>
@@ -394,7 +435,7 @@
       <button class="navbtn" data-tab="ai" onclick="goTab('ai')">עוזר AI <span>🤖</span></button>
       <button class="navbtn" data-tab="settings" onclick="goTab('settings')">הגדרות <span>⚙️</span></button>
       <button class="themeToggle" id="themeToggleBtn" onclick="toggleTheme()" style="margin-top:14px;">☀️ בהיר</button>
-      <div class="credit">ניהול הוצאות משפחתי 💰</div>
+      <div class="credit"><span class="brandLogo">We<span class="dollar">$</span>pend</span></div>
     </div>
     <div class="content" id="content"></div>
   </div>
@@ -410,7 +451,7 @@
    הגדרות - חובה להחליף בכתובת ה-URL של הפריסה (Deploy) שלכם
    אחרי שהרצתם setup ופרסתם את ה-Apps Script כ-Web app
    ========================================================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwtkca8JlOJC_dWOiB2OezBDbtTfx23TdMtITVi6uWp9gFYsgTMJhE8BbAS7EosUoy6/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxl5u94O7pkmslxQi3iqOUG_IhACz7zZXyrYbTjrLygu21BGDCz1k0MXGJh5UhWVSer/exec";
 if(window.ChartDataLabels){ Chart.register(ChartDataLabels); Chart.defaults.set('plugins.datalabels', {display:false}); }
 // אנימציה גלובלית פשוטה ובטוחה - כל הגרפים מונפשים בכניסה
 if(window.Chart){
@@ -435,12 +476,12 @@ let STATE = {
   data: null,          // { expenses, income, savings, settings }
   person1: '',
   person2: '',
-  goal: 135605,
+  goal: 0,
   categories: [],
   password: '',
   currentTab: 'dashboard',
-  currentMonth: new Date().getMonth(), // 0-11
-  currentYear: new Date().getFullYear(),
+  currentMonth: finPart(new Date()).m, // 0-11, לפי חודש פיננסי (10 עד 10)
+  currentYear: finPart(new Date()).y,
   expenseFilter: 'all', // all | p1 | p2
   aiMessages: [], // {role:'user'|'ai', text}
   forecastPerson: null, // מי נבחר בטאב התחזית
@@ -505,7 +546,7 @@ async function attemptLogin(pw, animate){
     STATE.password = pw;
     STATE.person1 = res.settings.Person1 || '';
     STATE.person2 = res.settings.Person2 || '';
-    STATE.goal = Number(res.settings.AnnualGoal) || 135605;
+    STATE.goal = Number(res.settings.AnnualGoal) || 0;
     STATE.categories = (res.settings.Categories || '').split(',').map(s=>s.trim()).filter(Boolean);
     sessionStorage.setItem('budget_pw', pw);
     showApp(animate);
@@ -535,7 +576,6 @@ async function postData(payload){
 }
 
 function showApp(withAnimation){
-  document.getElementById('sidebarNames').textContent = STATE.person1 + ' ו' + STATE.person2 + ' 🪙';
   if(withAnimation){
     playVaultTransition();
   } else {
@@ -591,8 +631,8 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   const g = document.getElementById('loginGreeting');
   if(g) g.innerHTML = '<span style="font-size:18px;font-weight:600;color:#2a2118;">' + timeGreeting() + ' ' + greetingEmoji() + '</span><br><span style="font-size:12px;opacity:.8;">הזינו את הסיסמה המשותפת כדי להיכנס</span>';
 
-  // בדיקה חד-פעמית: האם האתר הזה עדיין לא הוגדר (שמות+סיסמה)? אם כן, מציגים
-  // מסך היכרות קצר במקום מסך הכניסה הרגיל.
+  // בדיקה חד-פעמית: האם האתר הזה עדיין לא הוגדר (שמות + סיסמה)? אם כן, מציגים
+  // מסך היכרות קצר (בחירת סיסמה + שמות) במקום מסך הכניסה הרגיל.
   try{
     const checkRes = await fetch(APPS_SCRIPT_URL + '?action=checkSetup&_=' + Date.now());
     const checkData = await checkRes.json();
@@ -609,6 +649,7 @@ window.addEventListener('DOMContentLoaded', async ()=>{
   if(saved){ document.getElementById('pwInput').value = saved; attemptLogin(saved); }
 });
 
+/* ---------- הגדרה ראשונית (בחירת סיסמה + שמות בכניסה הראשונה) ---------- */
 function setSetupError(msg){ document.getElementById('setupError').textContent = msg; }
 
 async function doFirstTimeSetup(){
@@ -618,11 +659,17 @@ async function doFirstTimeSetup(){
   const pw2 = document.getElementById('setupPw2').value;
   if(!p1 || !p2){ setSetupError('נא למלא את שני השמות'); return; }
   if(!pw1){ setSetupError('נא לבחור סיסמה'); return; }
+  if(pw1.length < 4){ setSetupError('הסיסמה חייבת להיות לפחות 4 תווים'); return; }
   if(pw1 !== pw2){ setSetupError('הסיסמאות לא תואמות'); return; }
   setSetupError('שומר...');
   try{
-    const res = await postData({type:'firstTimeSetup', person1:p1, person2:p2, newPassword:pw1});
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({type:'firstTimeSetup', person1:p1, person2:p2, newPassword:pw1})
+    }).then(r=>r.json());
     if(res.error){ setSetupError(res.error); return; }
+    // הצלחה - עוברים למסך הכניסה ונכנסים אוטומטית עם הסיסמה החדשה
     document.getElementById('setupScreen').style.display='none';
     document.getElementById('loginScreen').style.display='flex';
     document.getElementById('pwInput').value = pw1;
@@ -655,11 +702,24 @@ function changeMonth(delta){
 
 /* ---------- עזרי נתונים ---------- */
 function rowDate(r){ return new Date(r.Date); }
-function inCurrentMonth(r){
-  const d = rowDate(r);
-  return d.getMonth()===STATE.currentMonth && d.getFullYear()===STATE.currentYear;
+
+/* ===== חודש פיננסי מ-10 עד 10 =====
+   המשכורת מגיעה ב-10 לחודש, ולכן "החודש" נמדד מ-10 לחודש עד 10 בחודש הבא.
+   דוגמה: 10/6 עד 9/7 שייך לחודש "יוני". החל מ-10/7 מתחיל חודש "יולי".
+   finPart מחזיר את החודש והשנה הפיננסיים של תאריך נתון. */
+function finPart(d){
+  let m = d.getMonth(), y = d.getFullYear();
+  if(d.getDate() < 10){ m -= 1; if(m<0){ m=11; y-=1; } }
+  return {m:m, y:y};
 }
-function inCurrentYear(r){ return rowDate(r).getFullYear()===STATE.currentYear; }
+function finMonth(d){ return finPart(d).m; }
+function finYear(d){ return finPart(d).y; }
+
+function inCurrentMonth(r){
+  const p = finPart(rowDate(r));
+  return p.m===STATE.currentMonth && p.y===STATE.currentYear;
+}
+function inCurrentYear(r){ return finYear(rowDate(r))===STATE.currentYear; }
 
 function monthExpenses(){ return (STATE.data.expenses||[]).filter(inCurrentMonth); }
 function yearExpenses(){ return (STATE.data.expenses||[]).filter(inCurrentYear); }
@@ -677,8 +737,13 @@ function forecastByMonth(person, type){
   return out;
 }
 
-function personIcon(person){ return (person||'?').trim().charAt(0); }
-function personClass(person){ return person===STATE.person1 ? 'p1' : 'p2'; }
+const SHARED = 'משותף'; // ערך ה"מי" עבור הוצאות משותפות (צד ג' לצד שני בני הזוג)
+function isShared(person){ return person===SHARED; }
+function personIcon(person){ return isShared(person) ? '🤝' : (person||'?').trim().charAt(0); }
+function personClass(person){
+  if(isShared(person)) return 'p3';
+  return person===STATE.person1 ? 'p1' : 'p2';
+}
 
 function chartColors(){
   const root = document.documentElement;
@@ -739,12 +804,21 @@ function currentTheme(){
   return 'dark';
 }
 
+// צבע הרקע שאייפון צובע בו את אזור פס-הבית התחתון / הסטטוס בר
+const THEME_COLORS = { dark:'#0f1620', light:'#dfe4ee', pink:'#f3c9dc' };
+function syncThemeColorMeta(theme){
+  const m = document.getElementById('themeColorMeta');
+  if(m) m.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.dark);
+}
+
 function setTheme(theme){
   const root = document.documentElement;
   root.classList.remove('light','pink');
   if(theme==='light') root.classList.add('light');
   else if(theme==='pink') root.classList.add('pink');
   localStorage.setItem('budget_theme', theme);
+  syncThemeColorMeta(theme);
+  applyAccent(currentAccent()); // שומר על צבע האקסנט הנבחר גם אחרי החלפת ערכה
   updateThemeBtn();
   render(); // כדי לרענן צבעי גרפים
 }
@@ -768,6 +842,37 @@ function updateThemeBtn(){
   const saved = localStorage.getItem('budget_theme');
   if(saved === 'light') document.documentElement.classList.add('light');
   else if(saved === 'pink') document.documentElement.classList.add('pink');
+  syncThemeColorMeta(saved === 'light' || saved === 'pink' ? saved : 'dark');
+})();
+
+/* ---------- צבעי אקסנט (נפרד מערכת הנושא) ---------- */
+const ACCENT_COLORS = {
+  green:  { label:'ירוק',    main:'#1fbf9f', dark:'#17a68a' },
+  blue:   { label:'כחול',    main:'#4f9bf5', dark:'#3a82db' },
+  red:    { label:'אדום',    main:'#f16a6a', dark:'#d95151' },
+  pink:   { label:'ורוד',    main:'#ec5a9a', dark:'#d6448a' },
+  gray:   { label:'שחור',    main:'#5a6270', dark:'#3f4652' }
+};
+
+function applyAccent(key){
+  const c = ACCENT_COLORS[key] || ACCENT_COLORS.green;
+  document.documentElement.style.setProperty('--accent', c.main);
+  document.documentElement.style.setProperty('--accent-dark', c.dark);
+  localStorage.setItem('budget_accent', key);
+}
+
+function setAccent(key){
+  applyAccent(key);
+  render(); // מרענן את התצוגה (הטאב הפעיל וכו')
+}
+
+function currentAccent(){
+  return localStorage.getItem('budget_accent') || 'green';
+}
+
+// מחילים את צבע האקסנט השמור בטעינה
+(function initAccent(){
+  applyAccent(localStorage.getItem('budget_accent') || 'green');
 })();
 
 /* ---------- Render dispatcher ---------- */
@@ -804,9 +909,12 @@ function render(){
 }
 
 function monthNavHTML(){
+  const m = STATE.currentMonth, y = STATE.currentYear;
+  const nextM = (m+1)%12;
+  const endLabel = MONTHS[nextM].slice(0,3);
   return `<div class="monthNav">
     <button onclick="changeMonth(-1)">‹</button>
-    <div class="label">${MONTHS[STATE.currentMonth]} ${STATE.currentYear}</div>
+    <div class="label">${MONTHS[m]} ${y}<div style="font-size:10px;font-weight:400;opacity:.7;">10 ${MONTHS[m].slice(0,3)} – 9 ${endLabel}</div></div>
     <button onclick="changeMonth(1)">›</button>
   </div>`;
 }
@@ -853,7 +961,7 @@ function renderInsights(){
   const prevM = STATE.currentMonth===0 ? 11 : STATE.currentMonth-1;
   const prevY = STATE.currentMonth===0 ? STATE.currentYear-1 : STATE.currentYear;
   const prevExp = sum((STATE.data.expenses||[]).filter(r=>{
-    const d = rowDate(r); return d.getMonth()===prevM && d.getFullYear()===prevY;
+    const p = finPart(rowDate(r)); return p.m===prevM && p.y===prevY;
   }),'Amount');
   if(prevExp > 0 && thisMonthExp > prevExp*1.2){
     const morePct = Math.round((thisMonthExp/prevExp-1)*100);
@@ -936,6 +1044,10 @@ function renderDashboard(){
   <div class="panel">
     <h3>התפלגות הוצאות ${STATE.person1} - ${MONTHS[STATE.currentMonth]}</h3>
     <div class="chartWrap"><canvas id="pieP1"></canvas></div>
+  </div>
+  <div class="panel">
+    <h3>התפלגות הוצאות משותפות 🤝 - ${MONTHS[STATE.currentMonth]}</h3>
+    <div class="chartWrap"><canvas id="pieShared"></canvas></div>
   </div>`;
 }
 
@@ -949,11 +1061,11 @@ function buildOnePersonDashChart(canvasId, person){
   if(!ctx) return;
   const expByMonth = Array(12).fill(0);
   const incByMonth = Array(12).fill(0);
-  (STATE.data.expenses||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
-    expByMonth[rowDate(r).getMonth()] += Number(r.Amount)||0;
+  (STATE.data.expenses||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
+    expByMonth[finMonth(rowDate(r))] += Number(r.Amount)||0;
   });
-  (STATE.data.income||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
-    incByMonth[rowDate(r).getMonth()] += Number(r.Net)||0;
+  (STATE.data.income||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
+    incByMonth[finMonth(rowDate(r))] += Number(r.Net)||0;
   });
   chartInstances[canvasId] = new Chart(ctx, {
     type:'bar',
@@ -976,6 +1088,7 @@ const PIE_PALETTE = ['#1fbf9f','#ec5a8f','#4f8ff7','#f5a623','#a463f2','#f26d6d'
 function buildCategoryPies(){
   buildOnePie('pieP1', STATE.person1);
   buildOnePie('pieP2', STATE.person2);
+  buildOnePie('pieShared', SHARED);
 }
 
 function buildOnePie(canvasId, person){
@@ -1032,10 +1145,12 @@ function renderExpenses(){
   let mExp = monthExpenses().sort((a,b)=> rowDate(b)-rowDate(a));
   const p1Total = sum(mExp.filter(r=>r.Person===STATE.person1),'Amount');
   const p2Total = sum(mExp.filter(r=>r.Person===STATE.person2),'Amount');
-  const total = p1Total + p2Total;
+  const sharedTotal = sum(mExp.filter(r=>isShared(r.Person)),'Amount');
+  const total = p1Total + p2Total + sharedTotal;
 
   if(STATE.expenseFilter==='p1') mExp = mExp.filter(r=>r.Person===STATE.person1);
   if(STATE.expenseFilter==='p2') mExp = mExp.filter(r=>r.Person===STATE.person2);
+  if(STATE.expenseFilter==='shared') mExp = mExp.filter(r=>isShared(r.Person));
 
   const rows = mExp.map(r => `
     <div class="listRow">
@@ -1060,11 +1175,13 @@ function renderExpenses(){
   <div class="cards">
     <div class="card"><div class="lbl">${STATE.person1}</div><div class="val red">${fmt(p1Total)}</div></div>
     <div class="card"><div class="lbl">${STATE.person2}</div><div class="val red">${fmt(p2Total)}</div></div>
+    <div class="card"><div class="lbl">🤝 ${SHARED}</div><div class="val red">${fmt(sharedTotal)}</div></div>
     <div class="card"><div class="lbl">סה"כ</div><div class="val red">${fmt(total)}</div></div>
   </div>
   <div class="filterRow">
     <button class="chip ${STATE.expenseFilter==='p1'?'active':''}" onclick="setExpFilter('p1')">${STATE.person1}</button>
     <button class="chip ${STATE.expenseFilter==='p2'?'active':''}" onclick="setExpFilter('p2')">${STATE.person2}</button>
+    <button class="chip ${STATE.expenseFilter==='shared'?'active':''}" onclick="setExpFilter('shared')">🤝 ${SHARED}</button>
     <button class="chip ${STATE.expenseFilter==='all'?'active':''}" onclick="setExpFilter('all')">הכל</button>
   </div>
   <div class="panel">
@@ -1141,7 +1258,8 @@ function categoryOptions(selected){
 function personOptions(selected){
   return `<option value="">בחר...</option>
     <option value="${STATE.person1}" ${STATE.person1===selected?'selected':''}>${STATE.person1}</option>
-    <option value="${STATE.person2}" ${STATE.person2===selected?'selected':''}>${STATE.person2}</option>`;
+    <option value="${STATE.person2}" ${STATE.person2===selected?'selected':''}>${STATE.person2}</option>
+    <option value="${SHARED}" ${SHARED===selected?'selected':''}>🤝 ${SHARED}</option>`;
 }
 
 function openExpenseModal(){
@@ -1278,8 +1396,8 @@ function buildIncomeChart(){
   if(!ctx) return;
   const p1ByMonth = Array(12).fill(0);
   const p2ByMonth = Array(12).fill(0);
-  (STATE.data.income||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear).forEach(r=>{
-    const m = rowDate(r).getMonth();
+  (STATE.data.income||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear).forEach(r=>{
+    const m = finMonth(rowDate(r));
     if(r.Person===STATE.person1) p1ByMonth[m] += Number(r.Net)||0;
     else if(r.Person===STATE.person2) p2ByMonth[m] += Number(r.Net)||0;
   });
@@ -1311,8 +1429,8 @@ function buildOneForecastChart(canvasId, person){
   const forecastData = MONTHS.map((_,i)=> forecast[i]||0);
 
   const actualByMonth = Array(12).fill(0);
-  (STATE.data.income||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
-    actualByMonth[rowDate(r).getMonth()] += Number(r.Net)||0;
+  (STATE.data.income||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
+    actualByMonth[finMonth(rowDate(r))] += Number(r.Net)||0;
   });
 
   chartInstances[canvasId] = new Chart(ctx, {
@@ -1339,11 +1457,11 @@ function buildIncomeExpenseCharts(){
     if(!ctx) return;
     const incByMonth = Array(12).fill(0);
     const expByMonth = Array(12).fill(0);
-    (STATE.data.income||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
-      incByMonth[rowDate(r).getMonth()] += Number(r.Net)||0;
+    (STATE.data.income||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
+      incByMonth[finMonth(rowDate(r))] += Number(r.Net)||0;
     });
-    (STATE.data.expenses||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
-      expByMonth[rowDate(r).getMonth()] += Number(r.Amount)||0;
+    (STATE.data.expenses||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
+      expByMonth[finMonth(rowDate(r))] += Number(r.Amount)||0;
     });
     chartInstances[canvasId] = new Chart(ctx, {
       type:'line',
@@ -1726,7 +1844,7 @@ function renderSavings(){
 
   return `
   <div class="topbar">
-    <h2>מעקב חיסכון ${STATE.currentYear}</h2>
+    <h2>מעקב חיסכון</h2>
     <button class="addBtn" onclick="openSavingModal()">הוסף הפקדה +</button>
   </div>
   <div class="panel">
@@ -1820,7 +1938,7 @@ function buildSavingsChart(){
   const byMonthP1 = Array(12).fill(0);
   const byMonthP2 = Array(12).fill(0);
   ySav.forEach(r=>{
-    const m = rowDate(r).getMonth();
+    const m = finMonth(rowDate(r));
     byMonth[m] += Number(r.Amount)||0;
     if(r.Person===STATE.person1) byMonthP1[m] += Number(r.Amount)||0;
     else if(r.Person===STATE.person2) byMonthP2[m] += Number(r.Amount)||0;
@@ -2425,7 +2543,7 @@ function budgetFor(person, category){
 
 function yearExpensesByCategory(person){
   const out = {};
-  (STATE.data.expenses||[]).filter(r=>rowDate(r).getFullYear()===STATE.currentYear && r.Person===person).forEach(r=>{
+  (STATE.data.expenses||[]).filter(r=>finYear(rowDate(r))===STATE.currentYear && r.Person===person).forEach(r=>{
     out[r.Category] = (out[r.Category]||0) + (Number(r.Amount)||0);
   });
   return out;
@@ -2435,8 +2553,8 @@ function yearExpensesByCategory(person){
 function monthExpensesByCategory(person){
   const out = {};
   (STATE.data.expenses||[]).filter(r=>{
-    const d = rowDate(r);
-    return d.getFullYear()===STATE.currentYear && d.getMonth()===STATE.currentMonth && r.Person===person;
+    const p = finPart(rowDate(r));
+    return p.y===STATE.currentYear && p.m===STATE.currentMonth && r.Person===person;
   }).forEach(r=>{
     out[r.Category] = (out[r.Category]||0) + (Number(r.Amount)||0);
   });
@@ -2474,6 +2592,7 @@ function renderForecast(){
     <div class="personChips">
       <button class="chip ${person===STATE.person2?'active':''}" onclick="setForecastPerson('${STATE.person2}')">${STATE.person2}</button>
       <button class="chip ${person===STATE.person1?'active':''}" onclick="setForecastPerson('${STATE.person1}')">${STATE.person1}</button>
+      <button class="chip ${person===SHARED?'active':''}" onclick="setForecastPerson('${SHARED}')">🤝 ${SHARED}</button>
     </div>
     <p style="color:var(--muted);font-size:14px;">הגדירו תחזית/תקציב חודשי לכל קטגוריה. הטבלה מציגה כמה הוצאתם ב${MONTHS[STATE.currentMonth]} וכמה נשאר.</p>
     <div class="budgetTableWrap">
@@ -2569,12 +2688,27 @@ function renderSettings(){
     </div>
   `).join('');
 
+  const activeAccent = currentAccent();
+  const accentCards = Object.keys(ACCENT_COLORS).map(key=>{
+    const c = ACCENT_COLORS[key];
+    return `<div class="accentCard ${activeAccent===key?'active':''}" onclick="setAccent('${key}')">
+      <div class="accentSwatch" style="background:linear-gradient(135deg, ${c.main}, ${c.dark});"></div>
+      <div class="accentName">${c.label}</div>
+      ${activeAccent===key?'<div class="themeCheck">✓</div>':''}
+    </div>`;
+  }).join('');
+
   return `
   <div class="topbar"><h2>הגדרות ⚙️</h2></div>
   <div class="panel">
     <h3>ערכת נושא</h3>
     <p style="color:var(--muted);font-size:14px;margin-top:0;">בחרו את המראה של האתר</p>
     <div class="themeGrid">${cards}</div>
+  </div>
+  <div class="panel">
+    <h3>צבע מותג 🎨</h3>
+    <p style="color:var(--muted);font-size:14px;margin-top:0;">הצבע של הטאב הפעיל, הלוגו וההדגשות (לא משנה את ערכת הנושא או צבעי הגרפים)</p>
+    <div class="accentGrid">${accentCards}</div>
   </div>
   <div class="panel">
     <h3>רקע האתר 🖼️</h3>
@@ -2618,7 +2752,7 @@ function renderSettings(){
   <div class="panel">
     <h3>אודות</h3>
     <p style="color:var(--muted);font-size:14px;line-height:1.6;">
-      אפליקציית ניהול הוצאות משפחתית של ${STATE.person1} ו${STATE.person2} 🪙<br>
+      <span class="brandLogo" style="font-size:14px;">We<span class="dollar">$</span>pend</span> - אפליקציית ניהול הוצאות משפחתית 🪙<br>
       הנתונים נשמרים בגיליון Google Sheets הפרטי שלכם.
     </p>
   </div>`;
@@ -2728,8 +2862,8 @@ function fmtDate(dt){
 /* ---------- שליחת סיכום לוואטסאפ ---------- */
 function monthSummaryText(monthIdx, who){
   const year = STATE.currentYear;
-  const inMonth = r => { const d = new Date(r.Date); return d.getMonth()===monthIdx && d.getFullYear()===year; };
-  const inYear = r => new Date(r.Date).getFullYear()===year;
+  const inMonth = r => { const p = finPart(new Date(r.Date)); return p.m===monthIdx && p.y===year; };
+  const inYear = r => finYear(new Date(r.Date))===year;
 
   const exp = (STATE.data.expenses||[]).filter(inMonth);
   const inc = (STATE.data.income||[]).filter(inMonth);
